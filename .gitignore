@@ -1,0 +1,10 @@
+__pycache__/
+.venv/
+data/
+test.py
+/static/east-board.png
+/static/west-board.png
+/static/main-board.png
+/static/hours.json
+/static/times.json
+/static/times.txt

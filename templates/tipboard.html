@@ -1,0 +1,47 @@
+<html>
+
+	<head>
+		<title>{{ name }} Epcot Tip Board</title>
+		<link rel="icon" href="static/icon.png">
+		<style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+        .imgbox {
+            display: grid;
+            height: 100%;
+        }
+        .center-fit {
+            max-width: 100%;
+            max-height: 100vh;
+            margin: auto;
+        }
+				body {
+					background-color: black
+				}
+    </style>
+	</head>
+
+	<body>
+		<div class="imgbox">
+    	<img class="center-fit" src="" id="image">
+		</div>
+	</body>
+
+	<script>
+		function reloadImage() {
+			var myImageElement = document.getElementById("image");
+			myImageElement.src = "static/{{ board_image }}?rand=" + Math.random();
+		}
+
+		window.onload = function () {
+			reloadImage()
+		}
+
+		setInterval(function() {
+    	reloadImage()
+		}, 8000);
+	</script>
+
+</html>
