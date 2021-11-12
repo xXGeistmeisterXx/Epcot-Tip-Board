@@ -4,7 +4,6 @@ from flask import Flask, request, redirect, url_for, render_template
 from flask_apscheduler import APScheduler
 from flask_sqlalchemy import SQLAlchemy
 from flask_statistics import Statistics
-import time
 
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///data/stats.db"
@@ -63,13 +62,13 @@ def updateData():
 	api.updateAttractions()
 
 def updateImages():
-	image.generateMainBoard("static/templates/main-board.png", "static/main-board.png")
-	image.generateInnoventionsBoard("static/templates/west-board.png", "static/west-board.png", "west")
-	image.generateInnoventionsBoard("static/templates/east-board.png", "static/east-board.png", "east")
+	image.changeMainBoard()
+	image.changeInnoventionsBoards()
 
 if  __name__ == "__main__":
+	updateData()
 	updateImages()
 	scheduler.add_job(id = 'Update Data', func=updateData, trigger="interval", seconds=60)
-	scheduler.add_job(id = 'Update Images', func=updateImages, trigger="interval", seconds=8)
+	scheduler.add_job(id = 'Update Images', func=updateImages, trigger="interval", seconds=7)
 	scheduler.start()
 	app.run("0.0.0.0", 8082)
