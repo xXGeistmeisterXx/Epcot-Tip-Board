@@ -1,98 +1,134 @@
+import image
+
 import requests
 import json
 from datetime import datetime, timedelta
-import requests
-from tzlocal import get_localzone
-import pytz
-import copy
+from copy import deepcopy
 
-formattedAttractions = []
-attractionTimes = {}
-attractions = {}
+cookie = ""
+cookieExpiration = datetime.now() - timedelta(seconds=1)
 
-def getOutput(attraction):
-	result = f'{ attraction["time"] } min'
-	if not attraction["isRide"]:
-		result = "Open"
-	elif attraction["time"] == 0:
-		result = "No wait"
-	if attraction["isDown"]:
-		result = "Down"
-	if not attraction["isOpen"]:
-		result = "Closed"
-	return result
+token = ""
+tokenExpiration = datetime.now() - timedelta(seconds=1)
 
-def getAttractions():
-	if not formattedAttractions:
-		updateAttractions()
-	return copy.deepcopy(formattedAttractions)
+attractionsData = {}
+oldApiData = {}
+
+attractionsHours = {}
 
 def updateAttractions():
-		global formattedAttractions, attractions, attractionTimes
+		global attractionsData
 
-		try:
-			r = requests.get("https://queue-times.com/parks/5/queue_times.json")
-		except:
-			return
-
-		apiData = {}
-		for element in r.json()["lands"][0]["rides"]:
-			apiData[element["name"]] = element
-
-		if not attractions:
+		if not attractionsData:
 			f = open("data/attractions.json")
-			attractions = json.load(f)
+			attractionsData = json.load(f)
+
+		apiData = getDataFromApi()
 
 		formattedAttractions = []
-		for name in attractions:
-			if name in apiData:
-				obj = {"name":attractions[name]["name"], "isRide":attractions[name]["is_ride"], "time":apiData[name]["wait_time"], "isDown":not apiData[name]["is_open"]}
+		for name in attractionsData:
+			formattedAttraction = generateFormattedAttraction(name, attractionsData[name], apiData)
+			formattedAttractions.append(formattedAttraction)
 
-				if not obj["name"]:
-					obj["name"] = name
+		writeDebug(formattedAttractions)
+		image.generateBoards(formattedAttractions)
 
-				if name not in attractionTimes:
-					attractionTimes[name] = getAttractionHours(attractions[name]["url"], datetime.now().strftime("%Y-%m-%d"))
+def generateFormattedAttraction(attractionName, attractionData, apiData):
+	obj = {}
 
-				if attractionTimes[name]["close"] < datetime.now() and int(datetime.now().strftime("%H")) <= 7:
-					attractionTimes[name] = getAttractionHours(attractions[name]["url"], datetime.now().strftime("%Y-%m-%d"))
+	if "name" in attractionData:
+		obj["name"] = attractionData["name"]
+	else:
+		obj["name"] = attractionName
 
-				obj["isOpen"] = attractionTimes[name]["open"] < datetime.now() and attractionTimes[name]["close"] > datetime.now()
+	if attractionName in apiData:
+		attractionApiData = apiData[attractionName]
+		obj["isAttraction"] = attractionApiData["asset"]["type"].lower() == "attraction"
+		obj["isDown"] = not attractionApiData["standby"]["available"]
+		if "waitTime" in attractionApiData["standby"]:
+			obj["waitTime"] = attractionApiData["standby"]["waitTime"]
+		else:
+			obj["waitTime"] = 0
+		obj["hasLL"] = "flex" in attractionApiData
+		if obj["hasLL"]:
+			obj["LLActive"] = attractionApiData["flex"]["available"]
+			if "displayNextAvailableTime" in attractionApiData["flex"]:
+				obj["LLTimeNext"] = attractionApiData["flex"]["displayNextAvailableTime"]
+			if not obj["LLActive"] and "displayEnrollmentStartTime" in attractionApiData["flex"]:
+				obj["LLTimeStart"] = attractionApiData["flex"]["displayEnrollmentStartTime"]
+		obj["url"] = attractionApiData["asset"]["detailsUri"].split("/")[-2]
 
-				formattedAttractions.append(obj)
+	else:
+		obj["isAttraction"] = attractionData["isAttraction"]
+		obj["waitTime"], obj["isDown"] = getDataFromOldApi(attractionData["qtimeName"])
+		obj["hasLL"] = False
+		obj["url"] = attractionData["url"]
 
-		timeGet = datetime.fromisoformat(list(apiData.values())[0]["last_updated"][:-1]).replace(tzinfo=pytz.utc).astimezone(get_localzone()).strftime("%m/%d/%Y, %I:%M:%S %p")
+	obj["open"], obj["close"] = getAttractionHours(obj["url"])
+	obj["isOpen"] = obj["open"] < datetime.now() < obj["close"]
 
-		with open("static/times.txt", "w") as f:
-			f.write("Epcot Future World Wait Times:")
-			for attraction in formattedAttractions:
-				f.write(f'\n{ attraction["name"] } - { getOutput(attraction) }')
-			f.write(f'\n\nlast updated at { timeGet }')
-
-		with open("static/times.json", "w") as f:
-			f.write(json.dumps(formattedAttractions, indent=2))
-
-		with open("static/hours.json", "w") as f:
-			attractionTimesString = {}
-			for attraction in attractionTimes:
-				attractionTimesString[attraction] = {}
-				attractionTimesString[attraction]["open"] = attractionTimes[attraction]["open"].strftime("%Y-%m-%d, %H:%M:%S")
-				attractionTimesString[attraction]["close"] = attractionTimes[attraction]["close"].strftime("%Y-%m-%d, %H:%M:%S")
-			f.write(json.dumps(attractionTimesString, indent=2))
+	return obj
 
 def getCookie():
+	global cookie, cookieExpiration
+
+	if datetime.now() < cookieExpiration:
+		return cookie
+
 	s = requests.Session()
 	s.headers.update({"user-agent" : "Mozilla/1.22 (compatible; MSIE 2.0; Windows 3.1)"})
 	r = s.post(url="https://disneyworld.disney.go.com/finder/api/v1/authz/public", data="{}")
 	cookie = s.cookies.get_dict()["__d"]
+	cookieExpiration = datetime.now() + timedelta(seconds=int(r.json()["result"]["expires_in"]) - 60)
 	return cookie
 
+def getToken():
+	global token, tokenExpiration
 
-def getAttractionHours(attractionUrl, dateUrl):
+	if datetime.now() < tokenExpiration:
+		return token
 
+	url = "https://disneyworld.disney.go.com/authentication/get-client-token/"
+	r = requests.get(url, headers = {"user-agent" : "Mozilla/1.22 (compatible; MSIE 2.0; Windows 3.1)", "cookie": f"__d={ getCookie() };"})
+	token = r.json()["access_token"]
+	tokenExpiration = datetime.now() + timedelta(seconds=int(r.json()["expires_in"]) - 60)
+	return token
+
+def getDataFromApi():
+	url = "https://disneyworld.disney.go.com/tipboard-vas/api/v1/parks/80007838/experiences?userId=%7BCFBEEA52-3C8B-426A-BAB2-0A594CC6D256%7D&includeAssets=true"
+	r = requests.get(url, headers = {"user-agent" : "Mozilla/1.22 (compatible; MSIE 2.0; Windows 3.1)", "Authorization": f"BEARER { getToken() }"})
+
+	data = {}
+	for value in r.json()["availableExperiences"]:
+		data[value["asset"]["name"]] = value
+	return data
+
+def getDataFromOldApi(name):
+	global oldApiData
+
+	try:
+		r = requests.get("https://queue-times.com/parks/5/queue_times.json")
+	except:
+		if name in oldApiData:
+			return oldApiData[name]["wait_time"], not oldApiData[name]["is_open"]
+		else:
+			return 0, False
+
+	oldApiData = {}
+	for element in r.json()["lands"][0]["rides"]:
+		oldApiData[element["name"]] = element
+
+	return oldApiData[name]["wait_time"], not oldApiData[name]["is_open"]
+
+def getAttractionHours(attractionUrl):
+	global attractionsHours
+
+	if attractionUrl in attractionsHours and ( attractionsHours[attractionUrl]["close"] > datetime.now() or int(datetime.now().strftime("%H")) > 7 ):
+		return attractionsHours[attractionUrl]["open"], attractionsHours[attractionUrl]["close"]
+
+	dateUrl = datetime.now().strftime('%Y-%m-%d')
 	url = f"https://disneyworld.disney.go.com/finder/api/v1/explorer-service/details-entity-simple/wdw/{ attractionUrl }/{ dateUrl }/"
-	cookie = getCookie()
-	r = requests.get(url, headers = {"user-agent" : "Mozilla/1.22 (compatible; MSIE 2.0; Windows 3.1)", "cookie": f"__d={ cookie };"})
+	r = requests.get(url, headers = {"user-agent" : "Mozilla/1.22 (compatible; MSIE 2.0; Windows 3.1)", "cookie": f"__d={ getCookie() };"})
 	timeDict = r.json()["aagData"]["schedule"]["schedules"]
 
 	startTimeString = timeDict["Operating"]["Morning"][0]["startTime"]
@@ -108,4 +144,23 @@ def getAttractionHours(attractionUrl, dateUrl):
 	if startTime > endTime:
 		endTime = endTime + timedelta(days=1)
 
-	return {"open": startTime, "close": endTime}
+	attractionsHours[attractionUrl] = {}
+	attractionsHours[attractionUrl]["open"], attractionsHours[attractionUrl]["close"] = startTime, endTime
+
+	return startTime, endTime
+
+def writeDebug(formattedAttractions):
+
+	with open("static/times.txt", "w") as f:
+		f.write("Epcot Future World Wait Times:")
+		for attraction in formattedAttractions:
+			f.write(f'\n{ attraction["name"] } - { image.getOutput(attraction) }')
+
+	with open("static/times.json", "w") as f:
+		attractionsString = []
+		for attraction in formattedAttractions:
+			stringAttraction = deepcopy(attraction)
+			stringAttraction["open"] = stringAttraction["open"].strftime("%Y-%m-%d, %H:%M:%S")
+			stringAttraction["close"] = stringAttraction["close"].strftime("%Y-%m-%d, %H:%M:%S")
+			attractionsString.append(stringAttraction)
+		f.write(json.dumps(attractionsString, indent=2))
