@@ -4,7 +4,10 @@ import math
 import os
 
 mainBoardData = {}
+mainBoardData["position"] = 0
+
 innoventionsBoardsData = {}
+innoventionsBoardsData["position"] = -1
 
 def getOutput(attraction):
 	result = f'{ attraction["waitTime"] } min'
@@ -24,12 +27,10 @@ def generateBoards(formattedAttractions):
 
 def generateMainBoard(formattedAttractions):
 	global mainBoardData
-	mainBoardData = {}
 
 	pageLength = 7
 
 	mainBoardData["pages"] = math.ceil(len(formattedAttractions) / pageLength)
-	mainBoardData["position"] = 0
 
 	intialHeight = 90
 	spacing = 100
@@ -53,11 +54,9 @@ def generateMainBoard(formattedAttractions):
 
 def generateInnoventionsBoards(formattedAttractions):
 	global innoventionsBoardsData
-	innoventionsBoardsData = {}
 
 	pageLength = 2
 	innoventionsBoardsData["pages"] = math.ceil(len(formattedAttractions) / pageLength)
-	innoventionsBoardsData["position"] = -1
 
 
 	for page in range(innoventionsBoardsData["pages"]):
