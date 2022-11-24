@@ -1,42 +1,10 @@
 import api, image
 
-from flask import Flask, request, redirect, url_for, render_template
+from flask import Flask, redirect, render_template
 from flask_apscheduler import APScheduler
-from flask_sqlalchemy import SQLAlchemy
-from flask_statistics import Statistics
 
 app = Flask(__name__)
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///data/stats.db"
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-
-db = SQLAlchemy(app)
 scheduler = APScheduler()
-
-class Request(db.Model):
-    __tablename__ = "request"
-
-    index = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    response_time = db.Column(db.Float)
-    date = db.Column(db.DateTime)
-    method = db.Column(db.String)
-    size = db.Column(db.Integer)
-    status_code = db.Column(db.Integer)
-    path = db.Column(db.String)
-    user_agent = db.Column(db.String)
-    remote_address = db.Column(db.String)
-    exception = db.Column(db.String)
-    referrer = db.Column(db.String)
-    browser = db.Column(db.String)
-    platform = db.Column(db.String)
-    mimetype = db.Column(db.String)
-
-db.create_all()
-
-def check():
-	if request.remote_addr != "127.0.0.1":
-		return redirect(url_for("index"))
-
-statistics = Statistics(app, db, Request, check)
 
 @app.route("/")
 def index():
@@ -58,17 +26,20 @@ def east():
 def times():
 	return redirect("static/times.txt")
 
-def updateData():
-	api.updateAttractions()
+def update_wait_times():
+	image.generate_boards(api.get_wait_times())
 
-def updateImages():
-	image.changeMainBoard()
-	image.changeInnoventionsBoards()
+def update_images():
+	image.change_main_board()
+	image.change_innoventions_boards()
 
 if  __name__ == "__main__":
-	updateData()
-	updateImages()
-	scheduler.add_job(id = 'Update Data', func=updateData, trigger="interval", seconds=60)
-	scheduler.add_job(id = 'Update Images', func=updateImages, trigger="interval", seconds=7)
+	print("STARTING TIPBOARD")
+	update_wait_times()
+	print("UPDATED WAIT TIMES")
+	update_images()
+	print("UPDATED IMAGES")
+	scheduler.add_job(id = "update wait times", func=update_wait_times, trigger="interval", seconds=60)
+	scheduler.add_job(id = "update images", func=update_images, trigger="interval", seconds=7)
 	scheduler.start()
-	app.run("0.0.0.0", 8082)
+	app.run("0.0.0.0", 8081)

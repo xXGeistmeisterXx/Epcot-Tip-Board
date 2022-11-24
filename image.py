@@ -3,172 +3,173 @@ from datetime import datetime, timedelta
 import math
 import os
 
-mainBoardData = {}
-mainBoardData["position"] = 0
+main_board_data = {}
+main_board_data["position"] = 0
 
-innoventionsBoardsData = {}
-innoventionsBoardsData["position"] = -1
+innoventions_boards_data = {}
+innoventions_boards_data["position"] = -1
 
-def getOutput(attraction):
-	result = f'{ attraction["waitTime"] } min'
-	if not attraction["isAttraction"]:
-		result = "Open"
-	elif attraction["waitTime"] == 0:
-		result = "No wait"
-	if attraction["isDown"]:
-		result = "Down"
-	if not attraction["isOpen"]:
-		result = "Closed"
-	return result
+def generate_boards(attractions):
 
-def generateBoards(formattedAttractions):
-	generateMainBoard(formattedAttractions)
-	generateInnoventionsBoards(formattedAttractions)
+	if not os.path.exists("images/main-board"):
+		os.makedirs("images/main-board")
 
-def generateMainBoard(formattedAttractions):
-	global mainBoardData
+	if not os.path.exists("images/west-board"):
+		os.makedirs("images/west-board")
+		
+	if not os.path.exists("images/east-board"):
+		os.makedirs("images/east-board")
 
-	pageLength = 7
+	generate_main_board(attractions)
+	generate_innoventions_boards(attractions)
 
-	mainBoardData["pages"] = math.ceil(len(formattedAttractions) / pageLength)
+def generate_main_board(attractions):
+	global main_board_data
 
-	intialHeight = 90
+	page_length = 7
+
+	main_board_data["pages"] = math.ceil(len(attractions) / page_length)
+
+	intial_height = 90
 	spacing = 100
 	green = (19, 191, 45)
 
-	for page in range(mainBoardData["pages"]):
+	for page in range(main_board_data["pages"]):
 
 		img = Image.open("images/templates/main-board.png")
 		fnt = ImageFont.truetype('fonts/font.otf', 90)
 		d = ImageDraw.Draw(img)
 
-		startingIndex = page * pageLength
-		pageAttractions = formattedAttractions[startingIndex:startingIndex + pageLength]
-		for attraction in pageAttractions:
-			height = intialHeight + pageAttractions.index(attraction) * spacing
+		starting_index = page * page_length
+		page_attractions = attractions[starting_index:starting_index + page_length]
+		for attraction in page_attractions:
+			height = intial_height + page_attractions.index(attraction) * spacing
 
 			d.text((90, height), attraction["name"], font=fnt, fill=(255, 255, 255))
-			d.text((1750, height), getOutput(attraction), font=fnt, fill=green)
+			d.text((1750, height), attraction["wait time"], font=fnt, fill=green)
 
 			img.save(f"images/main-board/{ page }.png")
 
-def generateInnoventionsBoards(formattedAttractions):
-	global innoventionsBoardsData
+def generate_innoventions_boards(attractions):
+	global innoventions_boards_data
 
 	pageLength = 2
-	innoventionsBoardsData["pages"] = math.ceil(len(formattedAttractions) / pageLength)
+	innoventions_boards_data["pages"] = math.ceil(len(attractions) / pageLength)
 
 
-	for page in range(innoventionsBoardsData["pages"]):
-		startingIndex = page * pageLength
-		generateInnoventionsPage("images/templates/east-board.png", f"images/east-board/{ page }.png", formattedAttractions[startingIndex:startingIndex + pageLength])
-		generateInnoventionsPage("images/templates/west-board.png", f"images/west-board/{ page }.png", formattedAttractions[startingIndex:startingIndex + pageLength])
+	for page in range(innoventions_boards_data["pages"]):
+		starting_index = page * pageLength
+		generate_innoventions_page("images/templates/east-board.png", f"images/east-board/{ page }.png", attractions[starting_index:starting_index + pageLength])
+		generate_innoventions_page("images/templates/west-board.png", f"images/west-board/{ page }.png", attractions[starting_index:starting_index + pageLength])
 
 	time = datetime.now()
-	generateWelcomeBoard("images/templates/east-board.png", "images/east-board/-1.png", time)
-	generateWelcomeBoard("images/templates/west-board.png", "images/west-board/-1.png", time)
+	generate_welcome_board("images/templates/east-board.png", "images/east-board/-1.png", time)
+	generate_welcome_board("images/templates/west-board.png", "images/west-board/-1.png", time)
 
-def generateInnoventionsPage(inputImage, outputImage, attractions):
+def generate_innoventions_page(input_image, output_image, attractions):
 
-	intialHeight = 175
+	intial_height = 175
 	spacing = 100
-	intialWidth = 90
+	intial_width = 90
 	yellow = (214, 187, 54)
 	green = (19, 191, 45)
 	red = (184, 31, 31)
 
-	img = Image.open(inputImage)
+	img = Image.open(input_image)
 	fnt = ImageFont.truetype('fonts/font.otf', 115)
 	d = ImageDraw.Draw(img)
 
 	for attraction in attractions:
-		height = intialHeight + attractions.index(attraction) * 492
+		height = intial_height + attractions.index(attraction) * 492
 
-		d.text((intialWidth, height), attraction["name"], font=fnt, fill=(255, 255, 255))
+		d.text((intial_width, height), attraction["name"], font=fnt, fill=(255, 255, 255))
 
-		if(attraction["isOpen"]):
-			d.text((intialWidth + 60, height + 110), "Stand-by", font=fnt, fill=yellow)
-			d.text((1500, height + 110), getOutput(attraction), font=fnt, fill=green)
+		if(isOpen(attraction)):
+			d.text((intial_width + 60, height + 110), "Stand-by", font=fnt, fill=yellow)
+			d.text((1500, height + 110), attraction["wait time"], font=fnt, fill=green)
 		else:
-			d.text((intialWidth + 60, height + 110), "Closed", font=fnt, fill=yellow)
+			d.text((intial_width + 60, height + 110), "Closed", font=fnt, fill=yellow)
 
-		if attraction["hasLL"]:
+		if "LL" in attraction and isOpen(attraction):
 
-			if not attraction["LLActive"]:
+			if LLOpen(attraction):
 
-				if attraction["isOpen"]:
-					d.text((intialWidth + 60, height + 110 + 110), "Lightning Lane all distributed", font=fnt, fill=red)
-
-				elif "LLTimeStart" in attraction:
-					d.text((intialWidth + 60, height + 110 + 110), f"Lightning Lane opens at { attraction['LLTimeStart'] }", font=fnt, fill=red)
+				d.text((intial_width + 60, height + 110 + 110), "Lightning Lane:", font=fnt, fill=red)
+				d.text((1500, height + 110 + 110), attraction["LL"], font=fnt, fill=red)
 
 			else:
 
-				d.text((intialWidth + 60, height + 110 + 110), "Lightning Lane:", font=fnt, fill=red)
-				d.text((1500, height + 110 + 110), attraction["LLTimeNext"], font=fnt, fill=red)
+				d.text((intial_width + 60, height + 110 + 110), "Lightning Lane all distributed", font=fnt, fill=red)
 
-		img.save(outputImage)
 
-def generateWelcomeBoard(inputImage, outputImage, time):
+		img.save(output_image)
 
-	currentTime = time.strftime("%I:%M %p")
-	if(currentTime[0] == "0"):
-		currentTime = currentTime[1:]
+def generate_welcome_board(input_image, output_image, time):
+
+	current_time = time.strftime("%I:%M %p")
+	if(current_time[0] == "0"):
+		current_time = current_time[1:]
 
 	offset = 270
 	yellow = (214, 187, 54)
 	green = (19, 191, 45)
 
-	img = Image.open(inputImage)
+	img = Image.open(input_image)
 	fnt = ImageFont.truetype('fonts/font.otf', 180)
 	d = ImageDraw.Draw(img)
 
 	text = "Welcome to EPCOT"
-	d.text((getHorizontalCenter(img, fnt, text), getVerticalCenter(img, fnt, offset * -1, text)), text, font=fnt, fill=yellow)
+	d.text((get_horizontal_center(img, fnt, text), get_vertical_center(img, fnt, offset * -1, text)), text, font=fnt, fill=yellow)
 
 	text = "The current time is:"
-	d.text((getHorizontalCenter(img, fnt, text), getVerticalCenter(img, fnt, 0, text)), text, font=fnt, fill=green)
+	d.text((get_horizontal_center(img, fnt, text), get_vertical_center(img, fnt, 0, text)), text, font=fnt, fill=green)
 
-	text = currentTime
-	d.text((getHorizontalCenter(img, fnt, text), getVerticalCenter(img, fnt, offset, text)), text, font=fnt, fill=yellow)
+	text = current_time
+	d.text((get_horizontal_center(img, fnt, text), get_vertical_center(img, fnt, offset, text)), text, font=fnt, fill=yellow)
 
-	img.save(outputImage)
+	img.save(output_image)
 
-def getHorizontalCenter(image, font, text):
-	imageWidth = image.size[0]
-	fontWidth = font.getsize(text)[0]
-	return (imageWidth - fontWidth) / 2
+def get_horizontal_center(image, font, text):
+	image_width = image.size[0]
+	font_width = font.getsize(text)[0]
+	return (image_width - font_width) / 2
 
-def getVerticalCenter(image, font, offset, text):
-	imageHeight = image.size[1]
-	fontHeight = font.getsize(text)[1]
-	return (imageHeight - fontHeight) / 2 + offset
+def get_vertical_center(image, font, offset, text):
+	image_height = image.size[1]
+	font_height = font.getsize(text)[1]
+	return (image_height - font_height) / 2 + offset
 
-def changeMainBoard():
-	global mainBoardData
+def change_main_board():
+	global main_board_data
 
 	if os.path.exists("static/main-board.png"):
 		os.remove("static/main-board.png")
-	os.link(f'images/main-board/{ mainBoardData["position"] }.png', "static/main-board.png")
+	os.link(f'images/main-board/{ main_board_data["position"] }.png', "static/main-board.png")
 
-	mainBoardData["position"] += 1
+	main_board_data["position"] += 1
 
-	if mainBoardData["position"] == mainBoardData["pages"]:
-		mainBoardData["position"] = 0
+	if main_board_data["position"] == main_board_data["pages"]:
+		main_board_data["position"] = 0
 
-def changeInnoventionsBoards():
-	global innoventionsBoardsData
+def change_innoventions_boards():
+	global innoventions_boards_data
 
 	if os.path.exists("static/east-board.png"):
 		os.remove("static/east-board.png")
-	os.link(f'images/east-board/{ innoventionsBoardsData["position"] }.png', "static/east-board.png")
+	os.link(f'images/east-board/{ innoventions_boards_data["position"] }.png', "static/east-board.png")
 	if os.path.exists("static/west-board.png"):
 		os.remove("static/west-board.png")
-	os.link(f'images/west-board/{ innoventionsBoardsData["position"] }.png', "static/west-board.png")
+	os.link(f'images/west-board/{ innoventions_boards_data["position"] }.png', "static/west-board.png")
 
-	innoventionsBoardsData["position"] += 1
-	if innoventionsBoardsData["position"] == innoventionsBoardsData["pages"]:
-		innoventionsBoardsData["position"] = -1
+	innoventions_boards_data["position"] += 1
+	if innoventions_boards_data["position"] == innoventions_boards_data["pages"]:
+		innoventions_boards_data["position"] = -1
 		time = datetime.now() + timedelta(seconds=7)
-		generateWelcomeBoard("images/templates/east-board.png", "images/east-board/-1.png", time)
-		generateWelcomeBoard("images/templates/west-board.png", "images/west-board/-1.png", time)
+		generate_welcome_board("images/templates/east-board.png", "images/east-board/-1.png", time)
+		generate_welcome_board("images/templates/west-board.png", "images/west-board/-1.png", time)
+
+def isOpen(attraction):
+	return not (attraction["wait time"] == "Closed")
+
+def LLOpen(attraction):
+	return not (attraction["LL"] == "Lightning Lane all distributed")
