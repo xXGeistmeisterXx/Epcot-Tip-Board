@@ -35,6 +35,7 @@ def get_wait_times():
 	rows = table.find_all("tr")
 
 	last_check_time = soup.find("span", {"id":"f_lastcheck"}).text.split(" ")[0]
+	park_hours = soup.find("div", {"class":"hours"}).text.split(": ")[1]
 
 	attraction_times = []
 
@@ -68,12 +69,12 @@ def get_wait_times():
 	for attraction in attraction_times:
 		del attraction["location"]
 
-	write_debug(attraction_times, last_check_time)
+	write_debug(attraction_times, last_check_time, park_hours)
 
 	return attraction_times
 
-def write_debug(attractions, last_check_time):
+def write_debug(attractions, last_check_time, park_hours):
 	with open("static/times.txt", "w") as f:
-		f.write(f"Epcot Future World Wait Times (last updated { last_check_time }):")
+		f.write(f"Epcot Future World Wait Times [{ park_hours }] (last updated { last_check_time }):")
 		for attraction in attractions:
 			f.write(f'\n{ attraction["name"] } - { attraction["wait time"] }')
