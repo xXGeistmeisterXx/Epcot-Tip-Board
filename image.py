@@ -16,7 +16,7 @@ def generate_boards(attractions):
 
 	if not os.path.exists("images/west-board"):
 		os.makedirs("images/west-board")
-		
+
 	if not os.path.exists("images/east-board"):
 		os.makedirs("images/east-board")
 
@@ -45,8 +45,8 @@ def generate_main_board(attractions):
 		for attraction in page_attractions:
 			height = intial_height + page_attractions.index(attraction) * spacing
 
-			d.text((90, height), attraction["name"], font=fnt, fill=(255, 255, 255))
-			d.text((1750, height), attraction["wait time"], font=fnt, fill=green)
+			d.text((90, height), attraction.display_name, font=fnt, fill=(255, 255, 255))
+			d.text((1750, height), attraction.wait_time, font=fnt, fill=green)
 
 			img.save(f"images/main-board/{ page }.png")
 
@@ -82,22 +82,23 @@ def generate_innoventions_page(input_image, output_image, attractions):
 	for attraction in attractions:
 		height = intial_height + attractions.index(attraction) * 492
 
-		d.text((intial_width, height), attraction["name"], font=fnt, fill=(255, 255, 255))
+		d.text((intial_width, height), attraction.display_name, font=fnt, fill=(255, 255, 255))
 
-		if(isOpen(attraction)):
-			d.text((intial_width + 60, height + 110), "Stand-by", font=fnt, fill=yellow)
-			d.text((1500, height + 110), attraction["wait time"], font=fnt, fill=green)
+		if(attraction.isOpen()):
+			open_text = "Virtual-Queue" if attraction.VQ else "Stand-By"
+			d.text((intial_width + 60, height + 110), open_text, font=fnt, fill=yellow)
+			d.text((1500, height + 110), attraction.wait_time, font=fnt, fill=green)
 		else:
 			d.text((intial_width + 60, height + 110), "Closed", font=fnt, fill=yellow)
 
-		if "LL" in attraction and isOpen(attraction):
+		if attraction.LL:
 
-			if LLOpen(attraction):
+			if attraction.LLOpen():
 
 				d.text((intial_width + 60, height + 110 + 110), "Lightning Lane:", font=fnt, fill=red)
-				d.text((1500, height + 110 + 110), attraction["LL"], font=fnt, fill=red)
+				d.text((1500, height + 110 + 110), attraction.LL, font=fnt, fill=red)
 
-			else:
+			elif attraction.isOpen():
 
 				d.text((intial_width + 60, height + 110 + 110), "Lightning Lane all distributed", font=fnt, fill=red)
 
@@ -167,9 +168,3 @@ def change_innoventions_boards():
 		time = datetime.now() + timedelta(seconds=7)
 		generate_welcome_board("images/templates/east-board.png", "images/east-board/-1.png", time)
 		generate_welcome_board("images/templates/west-board.png", "images/west-board/-1.png", time)
-
-def isOpen(attraction):
-	return not (attraction["wait time"] == "Closed")
-
-def LLOpen(attraction):
-	return not (attraction["LL"] == "Lightning Lane all distributed")
