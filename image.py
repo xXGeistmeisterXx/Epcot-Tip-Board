@@ -1,5 +1,6 @@
 from PIL import Image, ImageDraw, ImageFont
 from datetime import datetime, timedelta
+import pytz
 import math
 import os
 
@@ -106,7 +107,7 @@ def generate_innoventions_page(input_image, output_image, attractions):
 
 def generate_welcome_board(input_image, output_image, time):
 
-	current_time = time.strftime("%I:%M %p")
+	current_time = time.astimezone(pytz.timezone("America/New_York")).strftime("%I:%M %p")
 	if(current_time[0] == "0"):
 		current_time = current_time[1:]
 
