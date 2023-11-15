@@ -37,7 +37,7 @@ def update_images():
 	image.change_main_board()
 	image.change_innoventions_boards()
 
-if  __name__ == "__main__":
+def start_tipboard():
 	print("STARTING TIPBOARD")
 	update_boards()
 	print("GENERATED BOARDS")
@@ -47,4 +47,7 @@ if  __name__ == "__main__":
 	scheduler.add_job(id = "update images", func=update_images, trigger="interval", seconds=7)
 	scheduler.start()
 	print("SCHEDULER RUNNING")
-	app.run("0.0.0.0", 8081)
+	return app
+
+if  __name__ == "__main__":
+	start_tipboard().run("0.0.0.0", 8081)
