@@ -3,6 +3,7 @@ __pycache__/
 /static/west-board.png
 /static/main-board.png
 /static/times.txt
+/static/api.json
 /images/main-board
 /images/east-board
 /images/west-board

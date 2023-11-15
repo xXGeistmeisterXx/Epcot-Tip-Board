@@ -3,3 +3,4 @@ Flask
 Flask_APScheduler
 Pillow
 PyYAML
+gunicorn
