@@ -1,6 +1,7 @@
 from bs4 import BeautifulSoup
 from urllib.request import urlopen
 import yaml
+import json
 
 class Attraction:
 
@@ -19,34 +20,48 @@ class Attraction:
  - LL: { self.LL }
  - VQ: { self.VQ }"""
 
+	def to_dict(self):
+		return {
+		"name" : self.name,
+		"wait_time": self.wait_time,
+		"LL": self.LL
+		}
+
 	def isOpen(self):
- 		return not (self.wait_time == "Closed")
+		return not (self.wait_time == "Closed")
 
 	def LLOpen(self):
 		return not (self.LL == "Lightning Lane all distributed")
 
+attraction_info = {}
+
 def get_attraction_info():
-	with open('attractions.yml', 'r') as file:
 
-		attractions_info = {
-		"attractions" : [],
-		"names" : {},
-		"VQ" : {}
-		}
+	global attraction_info
 
-		attractions = yaml.safe_load(file)
-		for attraction in attractions:
-			if isinstance(attraction, str):
-				attractions_info["attractions"].append(attraction)
-			else:
-				attraction_name = list(attraction.keys())[0]
-				attractions_info["attractions"].append(attraction_name)
+	if not attraction_info:
 
-				if "display name" in attraction[attraction_name]:
-					attractions_info["names"][attraction_name] = attraction[attraction_name]["display name"]
+		with open('attractions.yml', 'r') as file:
 
-				if "virtual queue" in attraction[attraction_name]:
-					attractions_info["VQ"][attraction_name] = attraction[attraction_name]["virtual queue"]
+			attractions_info = {
+			"attractions" : [],
+			"names" : {},
+			"VQ" : {}
+			}
+
+			attractions = yaml.safe_load(file)
+			for attraction in attractions:
+				if isinstance(attraction, str):
+					attractions_info["attractions"].append(attraction)
+				else:
+					attraction_name = list(attraction.keys())[0]
+					attractions_info["attractions"].append(attraction_name)
+
+					if "display name" in attraction[attraction_name]:
+						attractions_info["names"][attraction_name] = attraction[attraction_name]["display name"]
+
+					if "virtual queue" in attraction[attraction_name]:
+						attractions_info["VQ"][attraction_name] = attraction[attraction_name]["virtual queue"]
 
 		return attractions_info
 
@@ -103,6 +118,7 @@ def get_attractions():
 		del attraction.location
 
 	write_debug(attractions, last_check_time, park_hours)
+	write_api(attractions, last_check_time)
 
 	return attractions
 
@@ -112,5 +128,10 @@ def write_debug(attractions, last_check_time, park_hours):
 		for attraction in attractions:
 			f.write(f'\n{ attraction.display_name } - { attraction.wait_time }')
 
+def write_api(attractions, last_check_time):
+	api = { "update_time":last_check_time, "data":[attraction.to_dict() for attraction in attractions] }
+	with open("static/api.json", "w") as f:
+		json.dump(api, f)
+
 if __name__ == "__main__":
-	for attraction in get_attractions(): print(str(attraction))
+	for attraction in get_attractions(): print(str(attraction) + "\n")

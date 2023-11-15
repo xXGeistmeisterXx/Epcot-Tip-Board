@@ -56,7 +56,6 @@ def generate_innoventions_boards(attractions):
 	pageLength = 2
 	innoventions_boards_data["pages"] = math.ceil(len(attractions) / pageLength)
 
-
 	for page in range(innoventions_boards_data["pages"]):
 		starting_index = page * pageLength
 		generate_innoventions_page("images/templates/east-board.png", f"images/east-board/{ page }.png", attractions[starting_index:starting_index + pageLength])
