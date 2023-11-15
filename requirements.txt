@@ -1,6 +1,6 @@
 beautifulsoup4
 Flask
 Flask_APScheduler
-Pillow
+Pillow<=9.5.0
 PyYAML
 gunicorn
