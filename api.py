@@ -28,7 +28,7 @@ class Attraction:
 		}
 
 	def isOpen(self):
-		return not (self.wait_time == "Closed")
+		return not (self.wait_time == "Closed") and not (self.wait_time == "Refurb")
 
 	def LLOpen(self):
 		return not (self.LL == "Lightning Lane all distributed")
@@ -69,7 +69,7 @@ def get_attractions():
 
 	attractions_info = get_attraction_info()
 
-	statuses = ["Open", "Closed", "Down"]
+	statuses = ["Open", "Closed", "Down", "Refurb"]
 
 	url = "https://www.laughingplace.com/w/p/epcot-current-wait-times/"
 	page = urlopen(url)

@@ -84,7 +84,7 @@ def generate_innoventions_page(input_image, output_image, attractions):
 
 		d.text((intial_width, height), attraction.display_name, font=fnt, fill=(255, 255, 255))
 
-		if(attraction.isOpen()):
+		if attraction.isOpen():
 			open_text = "Virtual-Queue" if attraction.VQ else "Stand-By"
 			d.text((intial_width + 60, height + 110), open_text, font=fnt, fill=yellow)
 			d.text((1500, height + 110), attraction.wait_time, font=fnt, fill=green)
@@ -108,7 +108,7 @@ def generate_innoventions_page(input_image, output_image, attractions):
 def generate_welcome_board(input_image, output_image, time):
 
 	current_time = time.astimezone(pytz.timezone("America/New_York")).strftime("%I:%M %p")
-	if(current_time[0] == "0"):
+	if current_time[0] == "0":
 		current_time = current_time[1:]
 
 	offset = 270
